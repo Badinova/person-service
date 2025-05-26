@@ -1,5 +1,6 @@
 package ait.cohort55.person.model;
 
+import jakarta.persistence.Embeddable;
 import lombok.*;
 
 import java.io.Serializable;
@@ -9,6 +10,7 @@ import java.io.Serializable;
 @Getter
 @Setter
 @EqualsAndHashCode
+@Embeddable
 public class Address implements Serializable {
     private String city;
     private String street;

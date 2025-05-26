@@ -8,11 +8,11 @@ import ait.cohort55.person.dto.exception.ConflictException;
 import ait.cohort55.person.dto.exception.NotFoundException;
 import ait.cohort55.person.model.Address;
 import ait.cohort55.person.model.Person;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ConfigurationException;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -20,7 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class PersonServiseImpl implements PersonService{
+public class PersonServiseImpl implements PersonService {
     private final PersonRepository personRepository;
     private final ModelMapper modelMapper;
 
@@ -37,9 +37,11 @@ public class PersonServiseImpl implements PersonService{
     @Override
     public PersonDto getPersonById(Integer id) {
         Person person = personRepository.findById(id).orElseThrow(NotFoundException::new);
+
         return modelMapper.map(person, PersonDto.class);
     }
 
+    @Transactional
     @Override
     public PersonDto deletePersonById(Integer id) {
         Person person = personRepository.findById(id).orElseThrow(NotFoundException::new);
@@ -47,57 +49,50 @@ public class PersonServiseImpl implements PersonService{
         return modelMapper.map(person, PersonDto.class);
     }
 
+    @Transactional
     @Override
     public PersonDto updatePerson(Integer id, String name) {
         Person person = personRepository.findById(id).orElseThrow(NotFoundException::new);
-        String personName = person.getName();
-        if (name != null && !name.equals(person.getName())) {
-            person.setName(name);
-        }
+        person.setName(name);
         return modelMapper.map(person, PersonDto.class);
     }
 
+    @Transactional
     @Override
     public PersonDto updatePersonAddress(Integer id, AddressDto addresDto) {
         Person person = personRepository.findById(id).orElseThrow(NotFoundException::new);
-        Address newAddress = modelMapper.map(addresDto, Address.class);
-        person.setAddress(newAddress);
+        person.setAddress(modelMapper.map(addresDto, Address.class));
         return modelMapper.map(person, PersonDto.class);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public PersonDto[] findPersonsByName(String name) {
-        List<Person> persons = personRepository.findPersonByNameIgnoreCase(name);
-        return persons.stream()
-                .map(person -> modelMapper.map(person, PersonDto.class))
+        return personRepository.findPersonByNameIgnoreCase(name)
+                .map(p -> modelMapper.map(p, PersonDto.class))
                 .toArray(PersonDto[]::new);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public PersonDto[] findPersonsByCity(String city) {
-        List<Person> persons = personRepository.findPersonByAddressCityIgnoreCase(city);
-        return persons.stream()
-                .map(person -> modelMapper.map(person, PersonDto.class))
+        return personRepository.findPersonByAddressCityIgnoreCase(city)
+                .map(p -> modelMapper.map(p, PersonDto.class))
                 .toArray(PersonDto[]::new);
     }
 
+    @Transactional(readOnly = true)
     @Override
-    public PersonDto[] findPersonsByBetweenAge(Integer minAge, Integer maxAge){
-        if (minAge == null || maxAge == null || minAge < 0 || maxAge < 0 || minAge < maxAge) {
-            throw new IllegalArgumentException("Incorrect age");
-        }
-        LocalDate now = LocalDate.now();
-        LocalDate maxBirthDate = now.minusYears(minAge);
-        LocalDate minBirthDate = now.minusYears(maxAge);
-        List<Person> persons = personRepository.findPersonByBirthDateBetween(minBirthDate, maxBirthDate);
-
-        return persons.stream()
-                .map(person -> modelMapper.map(person, PersonDto.class))
+    public PersonDto[] findPersonsByBetweenAge(Integer minAge, Integer maxAge) {
+        LocalDate from = LocalDate.now().minusYears(maxAge);
+        LocalDate to = LocalDate.now().minusYears(minAge);
+        return personRepository.findPersonByBirthDateBetween(from, to)
+                .map(p -> modelMapper.map(p, PersonDto.class))
                 .toArray(PersonDto[]::new);
     }
 
     @Override
     public Iterable<CityPopulationDto> getCitiesPopulation() {
-        return null;
+        return personRepository.getCitiesPopulation();
     }
 }
